@@ -332,10 +332,13 @@ def parse_computers(input_folder, output_folder):
 			if (h in str(comp['attributes']['primaryGroupID'][0])):
 				c.properties["highvalue"] = True
 
-		
 		c.properties['unconstraineddelegation'] = False
-		if check(comp['attributes']['userAccountControl'][0], user_access_control['TRUSTED_FOR_DELEGATION']):
-			c.properties['unconstraineddelegation'] = True
+		try:
+			if check(comp['attributes']['userAccountControl'][0], user_access_control['TRUSTED_FOR_DELEGATION']):
+				c.properties['unconstraineddelegation'] = True
+		except:
+			# pass because we already set as false
+			pass
 
 		c.properties["enabled"] = False
 		if (not check(comp['attributes']['userAccountControl'][0], user_access_control['ACCOUNTDISABLE'])):
@@ -351,15 +354,20 @@ def parse_computers(input_folder, output_folder):
 			c.properties['pwdlastset'] = to_epoch(comp['attributes']['pwdLastSet'][0])
 		except:
 			c.properties['pwdlastset'] = -1
-		
-		c.properties['serviceprincipalnames'] = comp['attributes']['servicePrincipalName']
+		try:
+			c.properties['serviceprincipalnames'] = comp['attributes']['servicePrincipalName']
+		except:
+			c.properties['serviceprincipalnames'] = None
 
 		try:
 			c.properties['description'] = comp['attributes']['description'][0].replace("'", "`")
 		except:
 			c.properties['description'] = None
 
-		c.properties['operatingsystem'] = comp['attributes']['operatingSystem']
+		try:
+			c.properties['operatingsystem'] = comp['attributes']['operatingSystem']
+		except:
+			c.properties['operatingsystem'] = None
 
 
 
