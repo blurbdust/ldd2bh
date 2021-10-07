@@ -285,7 +285,12 @@ def parse_users(input_folder, output_folder):
 		except:
 			u.properties['description'] = None
 		u.properties['userpassword'] = None
-		u.properties['admincount'] = None # TODO
+
+		if 'adminCount' in user['attributes'].keys():
+			u.properties['admincount'] = True
+		else:
+			u.properties['admincount'] = False
+
 		u.properties['sidhistory'] = []
 
 		u.Aces = []
@@ -427,7 +432,10 @@ def parse_groups(input_folder, output_folder):
 
 		g.properties['distinguishedname'] = group['attributes']['distinguishedName'][0].replace('"', '`').replace("'", "`")
 
-		g.properties['admincount'] = False # TODO
+		if 'adminCount' in group['attributes'].keys():
+			g.properties['admincount'] = True
+		else:
+			g.properties['admincount'] = False
 
 		try:
 			g.properties['description'] = group['attributes']['description'][0].replace('"', '`').replace("'", "`")
