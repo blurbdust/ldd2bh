@@ -266,9 +266,9 @@ def parse_users(input_folder, output_folder):
 			u.properties['hasspn'] = False
 
 		try:
-			u.properties['displayname'] = user['attributes']['displayName'][0]
+			u.properties['displayname'] = user['attributes']['displayName'][0].replace('"', '`').replace("'", "`")
 		except:
-			u.properties['displayname'] = user['attributes']['sAMAccountName'][0]
+			u.properties['displayname'] = user['attributes']['sAMAccountName'][0].replace('"', '`').replace("'", "`")
 		u.properties['email'] = None
 		u.properties['title'] = None
 		u.properties['homedirectory'] = None
