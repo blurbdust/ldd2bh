@@ -409,14 +409,14 @@ def parse_groups(input_folder, output_folder):
 		g.ObjectIdentifier = group['attributes']['objectSid'][0]
 
 		try:
-			g.properties['name'] = str(group['attributes']['userPrincipalName'][0]).upper()
+			g.properties['name'] = str(group['attributes']['userPrincipalName'][0]).upper().replace('"', '`').replace("'", "`")
 		except:
-			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1] + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
+			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").replace('"', '`').replace("'", "`") + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper().replace('"', '`').replace("'", "`")
 
 		try:
 			g.properties['domain'] = str(group['attributes']['userPrincipalName'][0]).upper().split("@")[1]
 		except:
-			g.properties['domain'] = str(g.properties["name"]).upper().split("@")[1]
+			g.properties['domain'] = str(g.properties["name"]).upper().split("@")[1].replace('"', '`').replace("'", "`")
 
 		g.properties['objectid'] = group['attributes']['objectSid'][0]
 
@@ -425,7 +425,7 @@ def parse_groups(input_folder, output_folder):
 			if (h in str(group['attributes']['objectSid'][0]).split("-")[-1:]):
 				g.properties['highvalue'] = True
 
-		g.properties['distinguishedname'] = group['attributes']['distinguishedName'][0]
+		g.properties['distinguishedname'] = group['attributes']['distinguishedName'][0].replace('"', '`').replace("'", "`")
 
 		g.properties['admincount'] = False # TODO
 
@@ -497,6 +497,9 @@ if __name__ == '__main__':
 
 	parser.add_argument('-i','--input', dest="input_folder", default=".", required=False, help='Input Directory for ldapdomaindump data, default: current directory')
 	parser.add_argument('-o','--output', dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
+	#parser.add_argument('-u','--users', dest="", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
+	#parser.add_argument('-c','--computers', '--comps' dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
+	#parser.add_argument('-g','--groups', dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
 
 	args = parser.parse_args()
 
