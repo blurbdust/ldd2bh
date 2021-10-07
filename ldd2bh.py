@@ -34,38 +34,40 @@ user_access_control = {
 }
 
 class User:
-	AllowedToDelegate = []
-	ObjectIdentifier = ""
-	PrimaryGroupSid = ""
-	properties = {
-		"name": None,
-		"domain": None,
-		"objectid": None,
-		"distinguishedname": None,
-		"highvalue": None,
-		"unconstraineddelegation": None,
-		"passwordnotreqd": None,
-		"enabled": None,
-		"lastlogon": None,
-		"lastlogontimestamp": None,
-		"pwdlastset": None,
-		"dontreqpreauth": None,
-		"pwdneverexpires": None,
-		"sensitive": None,
-		"serviceprincipalnames": [],
-		"hasspn": None,
-		"displayname": None,
-		"email": None,
-		"title": None,
-		"homedirectory": None,
-		"description": None,
-		"userpassword": None,
-		"admincount": None,
-		"sidhistory": []
-	}
-	Aces = []
-	SPNTargets = []
-	HasSIDHistory = []
+
+	def __init__(self):
+		self.AllowedToDelegate = []
+		self.ObjectIdentifier = ""
+		self.PrimaryGroupSid = ""
+		self.properties = {
+			"name": None,
+			"domain": None,
+			"objectid": None,
+			"distinguishedname": None,
+			"highvalue": None,
+			"unconstraineddelegation": None,
+			"passwordnotreqd": None,
+			"enabled": None,
+			"lastlogon": None,
+			"lastlogontimestamp": None,
+			"pwdlastset": None,
+			"dontreqpreauth": None,
+			"pwdneverexpires": None,
+			"sensitive": None,
+			"serviceprincipalnames": [],
+			"hasspn": None,
+			"displayname": None,
+			"email": None,
+			"title": None,
+			"homedirectory": None,
+			"description": None,
+			"userpassword": None,
+			"admincount": None,
+			"sidhistory": []
+		}
+		self.Aces = []
+		self.SPNTargets = []
+		self.HasSIDHistory = []
 
 	def export(self):
 		buf = '{' + '"AllowedToDelegate": {}, "ObjectIdentifier": "{}", "PrimaryGroupSid": "{}", "Properties": {}, "Aces": {}, "SPNTargets": {}, "HasSIDHistory": {}'.format(
@@ -80,31 +82,33 @@ class User:
 		return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Computer:
-	ObjectIdentifier = ""
-	AllowedToAct = []
-	PrimaryGroupSid = ""
-	LocalAdmins = []
-	PSRemoteUsers = []
-	properties = {
-		"name": None,
-		"objectid": None,
-		"domain": None,
-		"highvalue": None,
-		"distinguishedname": None,
-		"unconstraineddelegation": None,
-		"enabled": None,
-		"haslaps": None,
-		"lastlogontimestamp": None,
-		"pwdlastset": None,
-		"serviceprincipalnames": [],
-		"description": None,
-		"operatingsystem": None
-	}
-	RemoteDesktopUsers = []
-	DcomUsers = []
-	AllowedToDelegate = []
-	Sessions = []
-	Aces = []
+
+	def __init__(self):
+		self.ObjectIdentifier = ""
+		self.AllowedToAct = []
+		self.PrimaryGroupSid = ""
+		self.LocalAdmins = []
+		self.PSRemoteUsers = []
+		self.properties = {
+			"name": None,
+			"objectid": None,
+			"domain": None,
+			"highvalue": None,
+			"distinguishedname": None,
+			"unconstraineddelegation": None,
+			"enabled": None,
+			"haslaps": None,
+			"lastlogontimestamp": None,
+			"pwdlastset": None,
+			"serviceprincipalnames": [],
+			"description": None,
+			"operatingsystem": None
+		}
+		self.RemoteDesktopUsers = []
+		self.DcomUsers = []
+		self.AllowedToDelegate = []
+		self.Sessions = []
+		self.Aces = []
 
 	def export(self):
 		buf = '{' + '"ObjectIdentifier": "{}", "AllowedToAct": {}, "PrimaryGroupSid": "{}", "LocalAdmins": {}, "PSRemoteUsers": {}, "Properties": {}, "RemoteDesktopUsers": {}, "DcomUsers": {}, "AllowedToDelegate": {}, "Sessions": {}, "Aces": {}'.format(
@@ -124,18 +128,20 @@ class Computer:
 		return buf.replace("'", '"').replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Group:
-	ObjectIdentifier = None
-	properties = {
-		"domain": None,
-		"objectid": None,
-		"highvalue": None,
-		"name": None,
-		"distinguishedname": None,
-		"admincount": None,
-		"description": None
-	}
-	Members = []
-	Aces = []
+
+	def __init__(self):
+		self.ObjectIdentifier = None
+		self.properties = {
+			"domain": None,
+			"objectid": None,
+			"highvalue": None,
+			"name": None,
+			"distinguishedname": None,
+			"admincount": None,
+			"description": None
+		}
+		self.Members = []
+		self.Aces = []
 
 	def export(self):
 		#self.sanitize()
@@ -148,22 +154,24 @@ class Group:
 		return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Domain:
-	ObjectIdentifier = None
-	Properties = {
-		"name": None,
-		"domain": None,
-		"highvalue": True,
-		"objectid": None,
-		"distinguishedname": None,
-		"description": None,
-		"functionallevel": None
-	}
-	Trusts = []
-	Aces = []
-	Links = []
-	Users = []
-	Computers = []
-	ChildOus = []
+
+	def __init__(self):
+		self.ObjectIdentifier = None
+		self.Properties = {
+			"name": None,
+			"domain": None,
+			"highvalue": True,
+			"objectid": None,
+			"distinguishedname": None,
+			"description": None,
+			"functionallevel": None
+		}
+		self.Trusts = []
+		self.Aces = []
+		self.Links = []
+		self.Users = []
+		self.Computers = []
+		self.ChildOus = []
 
 	def export(self):
 		buf = '{' + '"ObjectIdentifier": "{}", "Properties": {}, "Trusts": {}, "Aces": {}, "Links": {}, "Users": {}, "Computers": {}, "ChildOus": {}'.format(
@@ -202,7 +210,7 @@ def parse_users(input_folder, output_folder):
 			u.properties['name'] = str(user['attributes']['userPrincipalName'][0]).upper()
 		except:
 			u.properties['name'] = str(user['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1] + "@" + '.'.join(str(user['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
-		
+
 		try:
 			u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper().split("@")[1]
 		except:
@@ -221,7 +229,7 @@ def parse_users(input_folder, output_folder):
 			if (h in str(user['attributes']['primaryGroupID'][0])):
 				u.properties['highvalue'] = True
 
-		
+
 		u.properties['unconstraineddelegation'] = False
 		if check(user['attributes']['userAccountControl'][0], user_access_control['TRUSTED_FOR_DELEGATION']):
 			u.properties['unconstraineddelegation'] = True
@@ -249,7 +257,7 @@ def parse_users(input_folder, output_folder):
 			u.properties['pwdlastset'] = to_epoch(user['attributes']['pwdLastSet'][0])
 		except:
 			u.properties['pwdlastset'] = -1
-		
+
 		u.properties['dontreqpreauth'] = False
 		if check(user['attributes']['userAccountControl'][0], user_access_control['DONT_REQ_PREAUTH']):
 			u.properties["dontreqpreauth"] = True
@@ -286,7 +294,7 @@ def parse_users(input_folder, output_folder):
 
 		buf += u.export() + ', '
 		count += 1
-	
+
 	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "users", "count": {}, "version": 3'.format(count) + '}}'
 
 	with open(output_folder + "/users.json", "w") as outfile:
@@ -305,7 +313,7 @@ def parse_computers(input_folder, output_folder):
 		c.ObjectIdentifier = comp['attributes']['objectSid'][0]
 		c.AllowedToAct = []
 		c.PrimaryGroupSid = '-'.join(comp['attributes']['objectSid'][0].split("-")[:-1]) + "-" + str(comp['attributes']['primaryGroupID'][0])
-		
+
 		sid = '-'.join(comp['attributes']['objectSid'][0].split("-")[:-1])
 		c.LocalAdmins = []
 		c.LocalAdmins.append(build_la_dict(sid, "519", "Group"))
@@ -392,7 +400,7 @@ def parse_groups(input_folder, output_folder):
 	for group in j:
 		db[group['attributes']['distinguishedName'][0]] = [group['attributes']['objectSid'][0], "Group"]
 		#print(db[group['attributes']['distinguishedName'][0]])
-	
+
 	buf = '{"groups": ['
 	# now build up the whole file
 	f = open(output_folder + "/groups.json", "w")
@@ -454,18 +462,18 @@ def parse_domains(input_folder, output_folder):
 	for dom in j:
 		d = Domain()
 		d.ObjectIdentifier = dom['attributes']['objectSid'][0]
-		
 
-	
+
+
 		buf += d.export() + ', '
 		count += 1
-	
+
 	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": 3'.format(count) + '}}'
 
 	with open(output_folder + "/domains.json", "w") as outfile:
 		outfile.write(buf)
 
-	
+
 
 def init(input_folder, output_folder):
 	print("Parsing users...")
@@ -486,7 +494,7 @@ if __name__ == '__main__':
 			description='Convert ldapdomaindump to Bloodhound',
 			epilog=textwrap.dedent('''Examples:\npython3 ldd2bh.py -i ldd -o bh''')
 	)
-	
+
 	parser.add_argument('-i','--input', dest="input_folder", default=".", required=False, help='Input Directory for ldapdomaindump data, default: current directory')
 	parser.add_argument('-o','--output', dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
 
