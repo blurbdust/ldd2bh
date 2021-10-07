@@ -209,7 +209,7 @@ def parse_users(input_folder, output_folder):
 			u.properties['domain'] = str(u.properties["name"]).upper().split("@")[1]
 
 		u.properties['objectid'] = user['attributes']['objectSid'][0]
-		u.properties['distinguishedname'] = user['attributes']['distinguishedName'][0]
+		u.properties['distinguishedname'] = user['attributes']['distinguishedName'][0].replace('"', '`').replace("'", "`")
 
 		if ("$" in u.properties['distinguishedname']):
 			db[u.properties['distinguishedname']] = [u.ObjectIdentifier, "Computer"]
@@ -273,7 +273,7 @@ def parse_users(input_folder, output_folder):
 		u.properties['title'] = None
 		u.properties['homedirectory'] = None
 		try:
-			u.properties['description'] = user['attributes']['description'][0].replace("'", "`")
+			u.properties['description'] = user['attributes']['description'][0].replace('"', '`').replace("'", "`")
 		except:
 			u.properties['description'] = None
 		u.properties['userpassword'] = None
@@ -326,7 +326,7 @@ def parse_computers(input_folder, output_folder):
 
 		c.properties["objectid"] = comp['attributes']['objectSid'][0]
 
-		c.properties["distinguishedname"] = comp['attributes']['distinguishedName'][0]
+		c.properties["distinguishedname"] = comp['attributes']['distinguishedName'][0].replace('"', '`').replace("'", "`")
 
 		c.properties["highvalue"] = False
 		for h in hvt:
@@ -361,7 +361,7 @@ def parse_computers(input_folder, output_folder):
 			c.properties['serviceprincipalnames'] = None
 
 		try:
-			c.properties['description'] = comp['attributes']['description'][0].replace("'", "`")
+			c.properties['description'] = comp['attributes']['description'][0].replace('"', '`').replace("'", "`")
 		except:
 			c.properties['description'] = None
 
@@ -422,7 +422,7 @@ def parse_groups(input_folder, output_folder):
 		g.properties['admincount'] = False # TODO
 
 		try:
-			g.properties['description'] = group['attributes']['description'][0].replace("'", "`")
+			g.properties['description'] = group['attributes']['description'][0].replace('"', '`').replace("'", "`")
 		except:
 			g.properties['description'] = None
 
