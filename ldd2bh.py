@@ -476,7 +476,7 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	if (args.input_folder != []):
+	if ((args.input_folder != ".") and (args.output_folder != ".")):
 		#do things
 		init(args.input_folder, args.output_folder)
 	else:
