@@ -291,6 +291,7 @@ def parse_users(input_folder, output_folder):
 
 	with open(output_folder + "/users.json", "w") as outfile:
 		outfile.write(buf)
+	buf = ""
 
 def build_la_dict(domain_sid, group_sid, member_type):
 	return { "MemberId" : domain_sid + '-' + group_sid, "MemberType": member_type }
@@ -378,6 +379,7 @@ def parse_computers(input_folder, output_folder):
 
 	with open(output_folder + "/computers.json", "w") as outfile:
 		outfile.write(buf)
+	buf = ""
 
 def build_mem_dict(sid, member_type):
 	return { "MemberId" : sid, "MemberType": member_type }
@@ -393,6 +395,7 @@ def parse_groups(input_folder, output_folder):
 	
 	buf = '{"groups": ['
 	# now build up the whole file
+	f = open(output_folder + "/groups.json", "w")
 	for group in j:
 		g = Group()
 		g.ObjectIdentifier = group['attributes']['objectSid'][0]
@@ -430,14 +433,19 @@ def parse_groups(input_folder, output_folder):
 		except:
 			pass
 
-
-		buf += g.export() + ', '
 		count += 1
+		if (count < len(j)):
+			buf += g.export() + ', '
+		else:
+			buf += g.export()
+		f.write(buf)
+		buf = ""
 
-	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'
-
-	with open(output_folder + "/groups.json", "w") as outfile:
-		outfile.write(buf)
+	buf = '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'
+	f.write(buf)
+	f.close()
+	#with open(output_folder + "/groups.json", "w") as outfile:
+	#	outfile.write(buf)
 
 def parse_domains(input_folder, output_folder):
 	count = 0
