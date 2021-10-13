@@ -14,7 +14,7 @@ optional arguments:
   -o OUTPUT_FOLDER, --output OUTPUT_FOLDER
                         Output Directory for Bloodhound data, default: current
                         directory
-  -a, --all             Output only users, default: True
+  -a, --all             Output all files, default: True
   -u, --users           Output only users, default: False
   -c, --computers       Output only computers, default: False
   -g, --groups          Output only groups, default: False
