@@ -219,7 +219,7 @@ def parse_users(input_folder, output_folder):
 		if 'userPrincipalName' in user['attributes'].keys():
 			u.properties['name'] = str(user['attributes']['userPrincipalName'][0]).upper()
 		else:
-			u.properties['name'] = str(user['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1] + "@" + '.'.join(str(user['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
+			u.properties['name'] = str(user['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].upper() + "@" + '.'.join(str(user['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
 		if 'userPrincipalName' in user['attributes'].keys():
 			u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper().split("@")[1]
@@ -439,7 +439,7 @@ def parse_groups(input_folder, output_folder, no_users):
 		if 'userPrincipalName' in group['attributes'].keys():
 			g.properties['name'] = str(group['attributes']['userPrincipalName'][0]).upper().replace('"', '`').replace("'", "`")
 		else:
-			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").replace('"', '`').replace("'", "`") + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper().replace('"', '`').replace("'", "`")
+			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").replace('"', '`').replace("'", "`").upper() + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper().replace('"', '`').replace("'", "`")
 
 		if 'userPrincipalName' in group['attributes'].keys():
 			g.properties['domain'] = str(group['attributes']['userPrincipalName'][0]).upper().split("@")[1]
