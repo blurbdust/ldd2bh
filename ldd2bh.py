@@ -281,9 +281,12 @@ def parse_users(input_folder, output_folder):
 		u.properties['serviceprincipalnames'] = []
 		
 		if 'servicePrincipalName' in user['attributes'].keys():
-			u.properties['hasspn'] = user['attributes']['servicePrincipalName'][0]
+			u.properties['hasspn'] = True
+			for spn in user['attributes']['servicePrincipalName']:
+				u.properties['serviceprincipalnames'].append(spn)
 		else:
 			u.properties['hasspn'] = False
+
 
 		if 'displayName' in user['attributes'].keys():
 			u.properties['displayname'] = user['attributes']['displayName'][0].replace('"', '`').replace("'", "`")
