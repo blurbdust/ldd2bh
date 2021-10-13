@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import os, sys, uuid, argparse, textwrap, glob, json
+import os, sys, uuid, argparse, textwrap, glob, json, base64
 from datetime import datetime
+from binascii import b2a_hex
 
 hvt = ["512", "516", "519", "520"]
 
@@ -32,6 +33,12 @@ user_access_control = {
 	"TRUSTED_TO_AUTH_FOR_DELEGATION": 0x1000000,
 	"PARTIAL_SECRETS_ACCOUNT": 0x04000000
 }
+
+def ret_os_path():
+	if ((sys.platform == 'win32') and (os.environ.get('OS','') == 'Windows_NT')):
+		return "\\"
+	else:
+		return "/"
 
 class User:
 
@@ -157,7 +164,7 @@ class Domain:
 
 	def __init__(self):
 		self.ObjectIdentifier = None
-		self.Properties = {
+		self.properties = {
 			"name": None,
 			"domain": None,
 			"highvalue": True,
@@ -193,27 +200,30 @@ def check(attr, mask):
 
 def to_epoch(longform):
 	# 2021-09-30 05:28:09.685524+00:00
-	utc_time = datetime.strptime(longform, "%Y-%m-%d %H:%M:%S.%f+00:00")
-	epoch_time = int((utc_time - datetime(1970, 1, 1)).total_seconds())
-	return int(epoch_time)
+	try:
+		utc_time = datetime.strptime(longform, "%Y-%m-%d %H:%M:%S.%f+00:00")
+		epoch_time = int((utc_time - datetime(1970, 1, 1)).total_seconds())
+		return int(epoch_time)
+	except ValueError:
+		return -1
 
 def parse_users(input_folder, output_folder):
 	count = 0
-	j = json.loads(open(input_folder + "/domain_users.json", "r").read())
+	j = json.loads(open(input_folder + ret_os_path() + "domain_users.json", "r").read())
 	buf = '{"users": ['
 	for user in j:
 		u = User()
 		u.ObjectIdentifier = user['attributes']['objectSid'][0]
 		u.PrimaryGroupSid = '-'.join(user['attributes']['objectSid'][0].split("-")[:-1]) + "-" + str(user['attributes']['primaryGroupID'][0])
 
-		try:
+		if 'userPrincipalName' in user['attributes'].keys():
 			u.properties['name'] = str(user['attributes']['userPrincipalName'][0]).upper()
-		except:
+		else:
 			u.properties['name'] = str(user['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1] + "@" + '.'.join(str(user['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
-		try:
+		if 'userPrincipalName' in user['attributes'].keys():
 			u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper().split("@")[1]
-		except:
+		else:
 			u.properties['domain'] = str(u.properties["name"]).upper().split("@")[1]
 
 		u.properties['objectid'] = user['attributes']['objectSid'][0]
@@ -244,18 +254,19 @@ def parse_users(input_folder, output_folder):
 		if (not check(user['attributes']['userAccountControl'][0], user_access_control['ACCOUNTDISABLE'])):
 			u.properties['enabled'] = True
 
-		try:
+		if 'lastLogon' in user['attributes'].keys():
 			u.properties['lastlogon'] = to_epoch(user['attributes']['lastLogon'][0])
-		except:
+		else:
 			u.properties['lastlogon'] = -1
 
-		try:
+		if 'lastLogonTimestamp' in user['attributes'].keys():
 			u.properties['lastlogontimestamp'] = to_epoch(user['attributes']['lastLogonTimestamp'][0])
-		except:
+		else:
 			u.properties['lastlogontimestamp'] = -1
-		try:
+
+		if 'pwdLastSet' in user['attributes'].keys():
 			u.properties['pwdlastset'] = to_epoch(user['attributes']['pwdLastSet'][0])
-		except:
+		else:
 			u.properties['pwdlastset'] = -1
 
 		u.properties['dontreqpreauth'] = False
@@ -268,22 +279,26 @@ def parse_users(input_folder, output_folder):
 
 		u.properties['sensitive'] = False
 		u.properties['serviceprincipalnames'] = []
-		try:
+		
+		if 'servicePrincipalName' in user['attributes'].keys():
 			u.properties['hasspn'] = user['attributes']['servicePrincipalName'][0]
-		except:
+		else:
 			u.properties['hasspn'] = False
 
-		try:
+		if 'displayName' in user['attributes'].keys():
 			u.properties['displayname'] = user['attributes']['displayName'][0].replace('"', '`').replace("'", "`")
-		except:
+		else:
 			u.properties['displayname'] = user['attributes']['sAMAccountName'][0].replace('"', '`').replace("'", "`")
+
 		u.properties['email'] = None
 		u.properties['title'] = None
 		u.properties['homedirectory'] = None
-		try:
+
+		if 'description' in user['attributes'].keys():
 			u.properties['description'] = user['attributes']['description'][0].replace('"', '`').replace("'", "`")
-		except:
+		else:
 			u.properties['description'] = None
+
 		u.properties['userpassword'] = None
 
 		if 'adminCount' in user['attributes'].keys():
@@ -302,7 +317,7 @@ def parse_users(input_folder, output_folder):
 
 	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "users", "count": {}, "version": 3'.format(count) + '}}'
 
-	with open(output_folder + "/users.json", "w") as outfile:
+	with open(output_folder + ret_os_path() + "users.json", "w") as outfile:
 		outfile.write(buf)
 	buf = ""
 
@@ -311,7 +326,7 @@ def build_la_dict(domain_sid, group_sid, member_type):
 
 def parse_computers(input_folder, output_folder):
 	count = 0
-	j = json.loads(open(input_folder + "/domain_computers.json", "r").read())
+	j = json.loads(open(input_folder + ret_os_path() + "domain_computers.json", "r").read())
 	buf = '{"computers": ['
 	for comp in j:
 		c = Computer()
@@ -327,14 +342,14 @@ def parse_computers(input_folder, output_folder):
 
 		c.PSRemoteUsers = []
 
-		try:
+		if 'userPrincipalName' in comp['attributes'].keys():
 			c.properties["name"] = str(comp['attributes']['userPrincipalName'][0]).upper()
-		except:
+		else:
 			c.properties["name"] = str(comp['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "") + "." + '.'.join(str(comp['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
-		try:
+		if 'userPrincipalName' in comp['attributes'].keys():
 			c.properties["domain"] = str(comp['attributes']['userPrincipalName'][0]).upper().split(".")[1]
-		except:
+		else:
 			c.properties["domain"] = str(c.properties["name"]).upper().split(".")[1]
 
 		c.properties["objectid"] = comp['attributes']['objectSid'][0]
@@ -346,13 +361,12 @@ def parse_computers(input_folder, output_folder):
 			if (h in str(comp['attributes']['primaryGroupID'][0])):
 				c.properties["highvalue"] = True
 
-		c.properties['unconstraineddelegation'] = False
-		try:
+		if 'userAccountControl' in comp['attributes'].keys():
 			if check(comp['attributes']['userAccountControl'][0], user_access_control['TRUSTED_FOR_DELEGATION']):
 				c.properties['unconstraineddelegation'] = True
-		except:
-			# pass because we already set as false
-			pass
+		else:
+			c.properties['unconstraineddelegation'] = False
+
 
 		c.properties["enabled"] = False
 		if (not check(comp['attributes']['userAccountControl'][0], user_access_control['ACCOUNTDISABLE'])):
@@ -360,67 +374,76 @@ def parse_computers(input_folder, output_folder):
 
 		c.properties['haslaps'] = False # TDODO
 
-		try:
+		if 'lastLogonTimestamp' in comp['attributes'].keys():
 			c.properties['lastlogontimestamp'] = to_epoch(comp['attributes']['lastLogonTimestamp'][0])
-		except:
+		else:
 			c.properties['lastlogontimestamp'] = -1
-		try:
+
+		if 'pwdLastSet' in comp['attributes'].keys():
 			c.properties['pwdlastset'] = to_epoch(comp['attributes']['pwdLastSet'][0])
-		except:
+		else:
 			c.properties['pwdlastset'] = -1
-		try:
+
+		if 'servicePrincipalName' in comp['attributes'].keys():
 			c.properties['serviceprincipalnames'] = comp['attributes']['servicePrincipalName']
-		except:
+		else:
 			c.properties['serviceprincipalnames'] = None
 
-		try:
+		if 'description' in comp['attributes'].keys():
 			c.properties['description'] = comp['attributes']['description'][0].replace('"', '`').replace("'", "`")
-		except:
+		else:
 			c.properties['description'] = None
 
-		try:
+		if 'operatingSystem' in comp['attributes'].keys():
 			c.properties['operatingsystem'] = comp['attributes']['operatingSystem']
-		except:
+		else:
 			c.properties['operatingsystem'] = None
-
-
 
 		buf += c.export() + ', '
 		count += 1
 
 	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "computers", "count": {}, "version": 3'.format(count) + '}}'
 
-	with open(output_folder + "/computers.json", "w") as outfile:
+	with open(output_folder + ret_os_path() + "computers.json", "w") as outfile:
 		outfile.write(buf)
 	buf = ""
 
 def build_mem_dict(sid, member_type):
 	return { "MemberId" : sid, "MemberType": member_type }
 
-def parse_groups(input_folder, output_folder):
+def parse_groups(input_folder, output_folder, no_users):
 	count = 0
-	j = json.loads(open(input_folder + "/domain_groups.json", "r").read())
+
+	if (no_users):
+		j = json.loads(open(input_folder + ret_os_path() + "domain_users.json", "r").read())
+		for user in j:
+			u = user['attributes']['distinguishedName'][0].replace('"', '`').replace("'", "`")
+			if ("$" in u):
+				db[u] = [user['attributes']['objectSid'][0], "Computer"]
+			else:
+				db[u] = [user['attributes']['objectSid'][0], "User"]
+
+	j = json.loads(open(input_folder + ret_os_path() + "domain_groups.json", "r").read())
 
 	# fist build up group sids
 	for group in j:
 		db[group['attributes']['distinguishedName'][0]] = [group['attributes']['objectSid'][0], "Group"]
-		#print(db[group['attributes']['distinguishedName'][0]])
 
 	buf = '{"groups": ['
 	# now build up the whole file
-	f = open(output_folder + "/groups.json", "w")
+	f = open(output_folder + ret_os_path() + "groups.json", "w")
 	for group in j:
 		g = Group()
 		g.ObjectIdentifier = group['attributes']['objectSid'][0]
 
-		try:
+		if 'userPrincipalName' in group['attributes'].keys():
 			g.properties['name'] = str(group['attributes']['userPrincipalName'][0]).upper().replace('"', '`').replace("'", "`")
-		except:
+		else:
 			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").replace('"', '`').replace("'", "`") + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper().replace('"', '`').replace("'", "`")
 
-		try:
+		if 'userPrincipalName' in group['attributes'].keys():
 			g.properties['domain'] = str(group['attributes']['userPrincipalName'][0]).upper().split("@")[1]
-		except:
+		else:
 			g.properties['domain'] = str(g.properties["name"]).upper().split("@")[1].replace('"', '`').replace("'", "`")
 
 		g.properties['objectid'] = group['attributes']['objectSid'][0]
@@ -437,9 +460,9 @@ def parse_groups(input_folder, output_folder):
 		else:
 			g.properties['admincount'] = False
 
-		try:
+		if 'description' in group['attributes'].keys():
 			g.properties['description'] = group['attributes']['description'][0].replace('"', '`').replace("'", "`")
-		except:
+		else:
 			g.properties['description'] = None
 
 		try:
@@ -460,41 +483,73 @@ def parse_groups(input_folder, output_folder):
 	buf = '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'
 	f.write(buf)
 	f.close()
-	#with open(output_folder + "/groups.json", "w") as outfile:
-	#	outfile.write(buf)
+
+# https://stackoverflow.com/questions/33188413/python-code-to-convert-from-objectsid-to-sid-representation
+def sid_to_str(sid):
+	try:
+		# Python 3
+		if str is not bytes:
+			# revision
+			revision = int(sid[0])
+			# count of sub authorities
+			sub_authorities = int(sid[1])
+			# big endian
+			identifier_authority = int.from_bytes(sid[2:8], byteorder='big')
+			# If true then it is represented in hex
+			if identifier_authority >= 2 ** 32:
+				identifier_authority = hex(identifier_authority)
+
+			# loop over the count of small endians
+			sub_authority = '-' + '-'.join([str(int.from_bytes(sid[8 + (i * 4): 12 + (i * 4)], byteorder='little')) for i in range(sub_authorities)])
+		# Python 2
+		else:
+			revision = int(b2a_hex(sid[0]))
+			sub_authorities = int(b2a_hex(sid[1]))
+			identifier_authority = int(b2a_hex(sid[2:8]), 16)
+			if identifier_authority >= 2 ** 32:
+				identifier_authority = hex(identifier_authority)
+
+			sub_authority = '-' + '-'.join([str(int(b2a_hex(sid[11 + (i * 4): 7 + (i * 4): -1]), 16)) for i in range(sub_authorities)])
+		objectSid = 'S-' + str(revision) + '-' + str(identifier_authority) + sub_authority
+
+		return objectSid
+	except Exception:
+		pass
 
 def parse_domains(input_folder, output_folder):
 	count = 0
-	j = json.loads(open(input_folder + "/domain_trusts.json", "r").read())
+	sid = None
+	j = json.loads(open(input_folder + ret_os_path() + "domain_trusts.json", "r").read())
 	buf = '{"domains": ['
 	for dom in j:
 		d = Domain()
-		d.ObjectIdentifier = dom['attributes']['objectSid'][0]
+		if ("base64".upper() in dom['attributes']['securityIdentifier'][0]['encoding'].upper()):
+			sid = sid_to_str(base64.b64decode(dom['attributes']['securityIdentifier'][0]['encoded']))
+			d.ObjectIdentifier = sid
+		else:
+			d.ObjectIdentifier = None
+		d.properties['name'] = dom['attributes']['name'][0].upper()
+		d.properties['domain'] = dom['attributes']['cn'][0].upper()
+		d.properties['objectid'] = sid
+		d.properties['distinguishedname'] = dom['attributes']['distinguishedName'][0].upper()
 
+		if 'description' in dom['attributes'].keys():
+			d.properties['description'] = dom['attributes']['description'][0].replace('"', '`').replace("'", "`")
+		else:
+			d.properties['description'] = None
 
+		if 'msds-behavior-version' in dom['attributes'].keys():
+			d.properties['functionallevel'] = dom['attributes']['msds-behavior-version'][0]
+		else:
+			d.properties['functionallevel'] = None
 
 		buf += d.export() + ', '
 		count += 1
 
 	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": 3'.format(count) + '}}'
 
-	with open(output_folder + "/domains.json", "w") as outfile:
+	with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
 		outfile.write(buf)
-
-
-
-def init(input_folder, output_folder):
-	print("Parsing users...")
-	parse_users(input_folder, output_folder)
-	print("Parsing computers...")
-	parse_computers(input_folder, output_folder)
-	print("Parsing groups...")
-	parse_groups(input_folder, output_folder)
-	print("Done!")
-	#parse_domains(input_folder, output_folder)
-
-
-
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
@@ -505,14 +560,32 @@ if __name__ == '__main__':
 
 	parser.add_argument('-i','--input', dest="input_folder", default=".", required=False, help='Input Directory for ldapdomaindump data, default: current directory')
 	parser.add_argument('-o','--output', dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
-	#parser.add_argument('-u','--users', dest="", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
-	#parser.add_argument('-c','--computers', '--comps' dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
-	#parser.add_argument('-g','--groups', dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
+	parser.add_argument('-a','--all', action='store_true', default=True, required=False, help='Output only users, default: True')
+	parser.add_argument('-u','--users', action='store_true', default=False, required=False, help='Output only users, default: False')
+	parser.add_argument('-c','--computers', action='store_true', default=False, required=False, help='Output only computers, default: False')
+	parser.add_argument('-g','--groups', action='store_true', default=False, required=False, help='Output only groups, default: False')
+	parser.add_argument('-d','--domains', action='store_true', default=False, required=False, help='Output only domains, default: False')
 
 	args = parser.parse_args()
 
 	if ((args.input_folder != ".") and (args.output_folder != ".")):
-		#do things
-		init(args.input_folder, args.output_folder)
+		if (sum([args.users, args.computers, args.groups, args.domains]) == 0):
+			args.users = True
+			args.computers = True
+			args.groups = True
+			args.domains = True
+		if (args.users):
+			print("Parsing users...")
+			parse_users(args.input_folder, args.output_folder)
+		if (args.computers):
+			print("Parsing computers...")
+			parse_computers(args.input_folder, args.output_folder)
+		if (args.groups):
+			print("Parsing groups...")
+			parse_groups(args.input_folder, args.output_folder, not args.users)
+		if (args.domains):
+			print("Parsing domains...")
+			parse_domains(args.input_folder, args.output_folder)
+		print("Done!")
 	else:
 		parser.print_help()
