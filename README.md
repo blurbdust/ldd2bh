@@ -1,7 +1,8 @@
 # ldd2bh
 
 ```
-usage: ldd2bh.py [-h] [-i INPUT_FOLDER] [-o OUTPUT_FOLDER]
+usage: ldd2bh.py [-h] [-i INPUT_FOLDER] [-o OUTPUT_FOLDER] [-a] [-u] [-c] [-g]
+                 [-d]
 
 Convert ldapdomaindump to Bloodhound
 
@@ -13,6 +14,11 @@ optional arguments:
   -o OUTPUT_FOLDER, --output OUTPUT_FOLDER
                         Output Directory for Bloodhound data, default: current
                         directory
+  -a, --all             Output only users, default: True
+  -u, --users           Output only users, default: False
+  -c, --computers       Output only computers, default: False
+  -g, --groups          Output only groups, default: False
+  -d, --domains         Output only domains, default: False
 
 Examples:
 python3 ldd2bh.py -i ldd -o bh
