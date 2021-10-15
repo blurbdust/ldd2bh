@@ -34,6 +34,19 @@ user_access_control = {
 	"PARTIAL_SECRETS_ACCOUNT": 0x04000000
 }
 
+# https://github.com/fox-it/BloodHound.py/blob/6b83660d3b5adedc24e5b2c2d142c524e320ad1c/bloodhound/ad/utils.py#L101
+# I really didn't want to just copy paste this but this is the best way I can think of doing it so props to @dirkjanm
+functional_level = {
+	0: "2000 Mixed/Native",
+	1: "2003 Interim",
+	2: "2003",
+	3: "2008",
+	4: "2008 R2",
+	5: "2012",
+	6: "2012 R2",
+	7: "2016"
+}
+
 def ret_os_path():
 	if ((sys.platform == 'win32') and (os.environ.get('OS','') == 'Windows_NT')):
 		return "\\"
@@ -279,7 +292,7 @@ def parse_users(input_folder, output_folder):
 
 		u.properties['sensitive'] = False
 		u.properties['serviceprincipalnames'] = []
-		
+
 		if 'servicePrincipalName' in user['attributes'].keys():
 			u.properties['hasspn'] = True
 			for spn in user['attributes']['servicePrincipalName']:
@@ -522,6 +535,56 @@ def sid_to_str(sid):
 def parse_domains(input_folder, output_folder):
 	count = 0
 	sid = None
+	j = json.loads(open(input_folder + ret_os_path() + "domain_policy.json", "r").read())
+	buf = '{"domains": ['
+	for dom in j:
+		d = Domain()
+		if 'objectSid' in dom['attributes'].keys():
+			d.ObjectIdentifier = dom['attributes']['objectSid'][0]
+			d.properties['objectid'] = dom['attributes']['objectSid'][0]
+		else:
+			d.ObjectIdentifier = None
+			d.properties['objectid'] = None
+
+		if 'name' in dom['attributes'].keys():
+			d.properties['name'] = dom['attributes']['name'][0].upper()
+		else:
+			d.properties['name'] = None
+
+		if 'cn' in dom['attributes'].keys():
+			d.properties['domain'] = dom['attributes']['cn'][0].upper()
+		elif 'distinguishedName' in dom['attributes'].keys():
+			d.properties['domain'] = dom['attributes']['distinguishedName'][0].upper().replace(",DC=", ".").replace("DC=", "")
+		else:
+			d.properties['domain'] = dom['attributes']['cn'][0].upper()
+
+		if 'distinguishedName' in dom['attributes'].keys():
+			d.properties['distinguishedname'] = dom['attributes']['distinguishedName'][0].upper()
+		elif 'dn' in dom.keys():
+			d.properties['distinguishedname'] = dom['dn'].upper()
+		else:
+			d.properties['distinguisedname'] = None
+
+		if 'description' in dom['attributes'].keys():
+			d.properties['description'] = dom['attributes']['description'][0].replace('"', '`').replace("'", "`")
+		else:
+			d.properties['description'] = None
+
+		if 'msDS-Behavior-Version' in dom['attributes'].keys():
+			d.properties['functionallevel'] = functional_level[int(dom['attributes']['msDS-Behavior-Version'][0])]
+		else:
+			d.properties['functionallevel'] = None
+		buf += d.export() + ', '
+		count += 1
+
+	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": 3'.format(count) + '}}'
+	with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
+		outfile.write(buf)
+
+
+def parse_domain_trusts(input_folder, output_folder):
+	count = 0
+	sid = None
 	j = json.loads(open(input_folder + ret_os_path() + "domain_trusts.json", "r").read())
 	buf = '{"domains": ['
 	for dom in j:
@@ -541,8 +604,8 @@ def parse_domains(input_folder, output_folder):
 		else:
 			d.properties['description'] = None
 
-		if 'msds-behavior-version' in dom['attributes'].keys():
-			d.properties['functionallevel'] = dom['attributes']['msds-behavior-version'][0]
+		if 'msDS-Behavior-Version' in dom['attributes'].keys():
+			d.properties['functionallevel'] = functional_level[int(dom['attributes']['msDS-Behavior-Version'][0])]
 		else:
 			d.properties['functionallevel'] = None
 
@@ -550,9 +613,10 @@ def parse_domains(input_folder, output_folder):
 		count += 1
 
 	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": 3'.format(count) + '}}'
-
-	with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
-		outfile.write(buf)
+# I'll need to figure out how to append to this file later, not just with 'a'.
+# I'll need to add another domain object per trust. Maybe the parsing should all be in one function?
+#	with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
+#		outfile.write(buf)
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
