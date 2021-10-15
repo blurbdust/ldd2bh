@@ -1,5 +1,7 @@
 # ldd2bh
 
+## Usage
+
 ```
 usage: ldd2bh.py [-h] [-i INPUT_FOLDER] [-o OUTPUT_FOLDER] [-a] [-u] [-c] [-g]
                  [-d]
@@ -23,3 +25,12 @@ optional arguments:
 Examples:
 python3 ldd2bh.py -i ldd -o bh
 ```
+
+## TODO
+- [x] Parse `domain_users.json`
+- [x] Parse `domain_computers.json`
+- [x] Parse `domain_groups.json`
+- [x] Parse `domain_policy.json`
+- [ ] Parse `domain_trusts.json`
+- [ ] Double check there isn't more information included for local admin rights
+- [ ] Double check any other information that could be helpful or was accidentally skipped
