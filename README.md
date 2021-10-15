@@ -34,3 +34,4 @@ python3 ldd2bh.py -i ldd -o bh
 - [ ] Parse `domain_trusts.json`
 - [ ] Double check there isn't more information included for local admin rights
 - [ ] Double check any other information that could be helpful or was accidentally skipped
+- [ ] Code cleanup
