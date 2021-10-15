@@ -28,6 +28,7 @@ python3 ldd2bh.py -i ldd -o bh
 
 ## TODO
 - [x] Parse `domain_users.json`
+- [ ] Fix itermittent bug where `users.json` needs to be pretty printed to upload properly
 - [x] Parse `domain_computers.json`
 - [x] Parse `domain_groups.json`
 - [x] Parse `domain_policy.json`
