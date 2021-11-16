@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys, uuid, argparse, textwrap, glob, json, base64
+import os, sys, uuid, argparse, textwrap, glob, json, base64, re
 from datetime import datetime
 from binascii import b2a_hex
 
@@ -94,12 +94,13 @@ class User:
 			self.AllowedToDelegate,
 			self.ObjectIdentifier,
 			self.PrimaryGroupSid,
-			self.properties,
+			json.dumps(self.properties, indent=4, separators=(",", ": "), sort_keys=False),
 			self.Aces,
 			self.SPNTargets,
 			self.HasSIDHistory
 			) + '}'
-		return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
+		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		return buf.replace("'", '"').replace("`", "\'").replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Computer:
 
@@ -221,6 +222,9 @@ def to_epoch(longform):
 		return -1
 
 def parse_users(input_folder, output_folder):
+	# https://github.com/dzhibas/SublimePrettyJson/blob/af5a6708d308f60787499e360081bf92afe66156/PrettyJson.py#L48
+	brace_newline = re.compile(r'^((\s*)".*?":)\s*([{])', re.MULTILINE)
+	bracket_newline = re.compile(r'^((\s*)".*?":)\s*([\[])', re.MULTILINE)
 	count = 0
 	j = json.loads(open(input_folder + ret_os_path() + "domain_users.json", "r").read())
 	buf = '{"users": ['
@@ -233,14 +237,14 @@ def parse_users(input_folder, output_folder):
 			u.properties['name'] = str(user['attributes']['userPrincipalName'][0]).upper()
 		else:
 			u.properties['name'] = str(user['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].upper() + "@" + '.'.join(str(user['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
-
+#		u.properties['name'] = u.properties['name'].replace('"', "`").replace("'", '`')
 		if 'userPrincipalName' in user['attributes'].keys():
 			u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper().split("@")[1]
 		else:
 			u.properties['domain'] = str(u.properties["name"]).upper().split("@")[1]
 
 		u.properties['objectid'] = user['attributes']['objectSid'][0]
-		u.properties['distinguishedname'] = user['attributes']['distinguishedName'][0].replace('"', '`').replace("'", "`")
+		u.properties['distinguishedname'] = user['attributes']['distinguishedName'][0] #.replace('"', '`').replace("'", "`")
 
 		if ("$" in u.properties['distinguishedname']):
 			db[u.properties['distinguishedname']] = [u.ObjectIdentifier, "Computer"]
@@ -302,16 +306,16 @@ def parse_users(input_folder, output_folder):
 
 
 		if 'displayName' in user['attributes'].keys():
-			u.properties['displayname'] = user['attributes']['displayName'][0].replace('"', '`').replace("'", "`")
+			u.properties['displayname'] = user['attributes']['displayName'][0] #.replace('"', '`').replace("'", "`")
 		else:
-			u.properties['displayname'] = user['attributes']['sAMAccountName'][0].replace('"', '`').replace("'", "`")
+			u.properties['displayname'] = user['attributes']['sAMAccountName'][0] #.replace('"', '`').replace("'", "`")
 
 		u.properties['email'] = None
 		u.properties['title'] = None
 		u.properties['homedirectory'] = None
 
 		if 'description' in user['attributes'].keys():
-			u.properties['description'] = user['attributes']['description'][0].replace('"', '`').replace("'", "`")
+			u.properties['description'] = user['attributes']['description'][0] #.replace('"', '`').replace("'", "`")
 		else:
 			u.properties['description'] = None
 
@@ -329,11 +333,12 @@ def parse_users(input_folder, output_folder):
 		u.HasSIDHistory = []
 
 		buf += u.export() + ', '
+#		print(buf)
+#		sys.exit(1)
 		count += 1
 
-	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "users", "count": {}, "version": 3'.format(count) + '}}'
-
 	with open(output_folder + ret_os_path() + "users.json", "w") as outfile:
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "users", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 		outfile.write(buf)
 	buf = ""
 
