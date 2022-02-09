@@ -221,7 +221,7 @@ def to_epoch(longform):
 	except ValueError:
 		return -1
 
-def parse_users(input_folder, output_folder):
+def parse_users(input_folder, output_folder, bh_version):
 	# https://github.com/dzhibas/SublimePrettyJson/blob/af5a6708d308f60787499e360081bf92afe66156/PrettyJson.py#L48
 	brace_newline = re.compile(r'^((\s*)".*?":)\s*([{])', re.MULTILINE)
 	bracket_newline = re.compile(r'^((\s*)".*?":)\s*([\[])', re.MULTILINE)
@@ -333,8 +333,6 @@ def parse_users(input_folder, output_folder):
 		u.HasSIDHistory = []
 
 		buf += u.export() + ', '
-#		print(buf)
-#		sys.exit(1)
 		count += 1
 
 	with open(output_folder + ret_os_path() + "users.json", "w") as outfile:
@@ -345,7 +343,7 @@ def parse_users(input_folder, output_folder):
 def build_la_dict(domain_sid, group_sid, member_type):
 	return { "MemberId" : domain_sid + '-' + group_sid, "MemberType": member_type }
 
-def parse_computers(input_folder, output_folder):
+def parse_computers(input_folder, output_folder, bh_version):
 	count = 0
 	j = json.loads(open(input_folder + ret_os_path() + "domain_computers.json", "r").read())
 	buf = '{"computers": ['
@@ -432,7 +430,10 @@ def parse_computers(input_folder, output_folder):
 def build_mem_dict(sid, member_type):
 	return { "MemberId" : sid, "MemberType": member_type }
 
-def parse_groups(input_folder, output_folder, no_users):
+def parse_groups(input_folder, output_folder, no_users, bh_version):
+	# https://github.com/dzhibas/SublimePrettyJson/blob/af5a6708d308f60787499e360081bf92afe66156/PrettyJson.py#L48
+	brace_newline = re.compile(r'^((\s*)".*?":)\s*([{])', re.MULTILINE)
+	bracket_newline = re.compile(r'^((\s*)".*?":)\s*([\[])', re.MULTILINE)
 	count = 0
 
 	if (no_users):
@@ -452,7 +453,6 @@ def parse_groups(input_folder, output_folder, no_users):
 
 	buf = '{"groups": ['
 	# now build up the whole file
-	f = open(output_folder + ret_os_path() + "groups.json", "w")
 	for group in j:
 		g = Group()
 		g.ObjectIdentifier = group['attributes']['objectSid'][0]
@@ -493,17 +493,13 @@ def parse_groups(input_folder, output_folder, no_users):
 		except:
 			pass
 
+		buf += g.export() + ', '
 		count += 1
-		if (count < len(j)):
-			buf += g.export() + ', '
-		else:
-			buf += g.export()
-		f.write(buf)
-		buf = ""
 
-	buf = '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'
-	f.write(buf)
-	f.close()
+	with open(output_folder + ret_os_path() + "users.json", "w") as outfile:
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
+		outfile.write(buf)
+	buf = ""
 
 # https://stackoverflow.com/questions/33188413/python-code-to-convert-from-objectsid-to-sid-representation
 def sid_to_str(sid):
@@ -537,7 +533,7 @@ def sid_to_str(sid):
 	except Exception:
 		pass
 
-def parse_domains(input_folder, output_folder):
+def parse_domains(input_folder, output_folder, bh_version):
 	count = 0
 	sid = None
 	j = json.loads(open(input_folder + ret_os_path() + "domain_policy.json", "r").read())
@@ -637,6 +633,7 @@ if __name__ == '__main__':
 	parser.add_argument('-c','--computers', action='store_true', default=False, required=False, help='Output only computers, default: False')
 	parser.add_argument('-g','--groups', action='store_true', default=False, required=False, help='Output only groups, default: False')
 	parser.add_argument('-d','--domains', action='store_true', default=False, required=False, help='Output only domains, default: False')
+	parser.add_argument('-b','--bh-version', dest='bh_version', default="3", required=False, help='Bloodhound data format version, default: 3')
 
 	args = parser.parse_args()
 
@@ -648,16 +645,16 @@ if __name__ == '__main__':
 			args.domains = True
 		if (args.users):
 			print("Parsing users...")
-			parse_users(args.input_folder, args.output_folder)
+			parse_users(args.input_folder, args.output_folder, args.bh_version)
 		if (args.computers):
 			print("Parsing computers...")
-			parse_computers(args.input_folder, args.output_folder)
+			parse_computers(args.input_folder, args.output_folder, args.bh_version)
 		if (args.groups):
 			print("Parsing groups...")
-			parse_groups(args.input_folder, args.output_folder, not args.users)
+			parse_groups(args.input_folder, args.output_folder, not args.users, args.bh_version)
 		if (args.domains):
 			print("Parsing domains...")
-			parse_domains(args.input_folder, args.output_folder)
+			parse_domains(args.input_folder, args.output_folder, args.bh_version)
 		print("Done!")
 	else:
 		parser.print_help()
