@@ -100,7 +100,7 @@ class User:
 			self.HasSIDHistory
 			) + '}'
 		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
-		return buf.replace("'", '"').replace("`", "\'").replace("True", "true").replace("False", "false").replace("None", "null")
+		#return buf.replace("'", '"').replace("`", "\'").replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Computer:
 
@@ -146,7 +146,8 @@ class Computer:
 			self.Sessions,
 			self.Aces,
 			) + '}'
-		return buf.replace("'", '"').replace("True", "true").replace("False", "false").replace("None", "null")
+		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		#return buf.replace("'", '"').replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Group:
 
@@ -172,7 +173,8 @@ class Group:
 			self.Members,
 			self.Aces
 			) + '}'
-		return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
+		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		#return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
 
 class Domain:
 
@@ -205,7 +207,8 @@ class Domain:
 			self.Computers,
 			self.ChildOus
 			) + '}'
-		return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
+		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		#return buf.replace("'", '"').replace("`", "'").replace("True", "true").replace("False", "false").replace("None", "null")
 
 def check(attr, mask):
 	if ((attr & mask) > 0):
@@ -421,10 +424,10 @@ def parse_computers(input_folder, output_folder, bh_version):
 		buf += c.export() + ', '
 		count += 1
 
-	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "computers", "count": {}, "version": 3'.format(count) + '}}'
+	#buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "computers", "count": {}, "version": 3'.format(count) + '}}'
 
 	with open(output_folder + ret_os_path() + "computers.json", "w") as outfile:
-		outfile.write(buf)
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "computers", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 	buf = ""
 
 def build_mem_dict(sid, member_type):
@@ -496,7 +499,7 @@ def parse_groups(input_folder, output_folder, no_users, bh_version):
 		buf += g.export() + ', '
 		count += 1
 
-	with open(output_folder + ret_os_path() + "users.json", "w") as outfile:
+	with open(output_folder + ret_os_path() + "groups.json", "w") as outfile:
 		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 		outfile.write(buf)
 	buf = ""
