@@ -215,7 +215,7 @@ class Domain:
 		buf = '{' + '"ObjectIdentifier": "{}", "Properties": {}, "Trusts": {}, "Aces": {}, "Links": {}, "Users": {}, "Computers": {}, "ChildOus": {}'.format(
 			self.ObjectIdentifier,
 			json.dumps(self.properties),
-			self.Trusts,
+			json.dumps(self.Trusts),
 			self.Aces,
 			self.Links,
 			self.Users,
@@ -639,20 +639,41 @@ def parse_domain_trusts(input_folder, output_folder, bh_version):
 		else:
 			d.properties['functionallevel'] = None
 
+		target_domain_sid = None
+		already_found = json.loads(open(output_folder + ret_os_path() + "domains.json", "r").read())
+		for dom2 in already_found['domains']:
+			if (dom['attributes']['trustPartner'][0].upper() == dom2['Properties']['domain']):
+				target_domain_sid = dom2['ObjectIdentifier']
+
+		sid_filtering = None
+		if (dom['attributes']['trustAttributes'][0] & trust_flags['QUARANTINED_DOMAIN']):
+			sid_filtering = True
+		else:
+			sid_filtering = False
+
+		transitive = False
+		if (dom['attributes']['trustAttributes'][0] & trust_flags['FOREST_TRANSITIVE']):
+			transitive = True
+			sid_filtering = True
+
+		if (target_domain_sid):
+			d.Trusts.append({
+					"TargetDomain": dom['attributes']['trustPartner'][0].upper(),
+					"TargetDomainSid": target_domain_sid,
+					"IsTransitive": transitive, 
+					"TrustDirection": int(dom['attributes']['trustDirection'][0]), 
+					"TrustType": int(dom['attributes']['trustType'][0]), 
+					"SidFilteringEnabled": sid_filtering
+			})
 
 		buf += d.export() + ', '
 		count += 1
 
-		# it's here because it's a work in progress still
-		# if we find inbound or bidrectional, we need to fix up the already written domain
-		# otherwise we can write to only this domain
-		d.Trusts = { "TargetDomain": "", "TargetDomainSid": "", "IsTransitive": "", "TrustDirection": "", "TrustType": "", "SidFilteringEnabled": ""}
-
 	j = json.loads(open(output_folder + ret_os_path() + "domains.json", "r").read())
 
 	if (count > 0):
-		j2 = json.loads(buf[:-2] + "]}")
-		for dom in j2['domains']:
+		new_domains = json.loads(buf[:-2] + "]}")
+		for dom in new_domains['domains']:
 			j['domains'].append(dom)
 		j['meta']['count'] += count
 		with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:

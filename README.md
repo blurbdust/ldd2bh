@@ -34,8 +34,8 @@ python3 ldd2bh.py -i ldd -o bh
 - [x] Parse `domain_computers.json`
 - [x] Parse `domain_groups.json`
 - [x] Parse `domain_policy.json`
-- [ ] Parse `domain_trusts.json`
-- [ ] Fix non-working domain trusts
+- [x] Parse `domain_trusts.json`
+- [x] Fix non-working domain trusts
 - [ ] Double check there isn't more information included for local admin rights
 - [ ] Double check any other information that could be helpful or was accidentally skipped
 - [ ] Code cleanup
