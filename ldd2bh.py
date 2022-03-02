@@ -53,6 +53,9 @@ def ret_os_path():
 	else:
 		return "/"
 
+def python_to_json(j):
+	return j.replace("True", "true").replace("False", "false").replace("None", "null")
+
 class User:
 
 	def __init__(self):
@@ -99,7 +102,7 @@ class User:
 			self.SPNTargets,
 			self.HasSIDHistory
 			) + '}'
-		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		return python_to_json(json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))))
 
 class Computer:
 
@@ -145,7 +148,7 @@ class Computer:
 			self.Sessions,
 			self.Aces,
 			) + '}'
-		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		return python_to_json(json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))))
 
 class Group:
 
@@ -171,7 +174,7 @@ class Group:
 			json.dumps(self.Members),
 			self.Aces
 			) + '}'
-		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		return python_to_json(json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))))
 
 class Domain:
 
@@ -204,7 +207,7 @@ class Domain:
 			self.Computers,
 			self.ChildOus
 			) + '}'
-		return json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))).replace("True", "true").replace("False", "false").replace("None", "null")
+		return python_to_json(json.loads(json.dumps(buf, indent=4, sort_keys=False, separators=(",", ": "))))
 
 def check(attr, mask):
 	if ((attr & mask) > 0):
@@ -362,19 +365,22 @@ def parse_computers(input_folder, output_folder, bh_version):
 
 		c.PSRemoteUsers = []
 
-		if 'userPrincipalName' in comp['attributes'].keys():
-			c.properties["name"] = str(comp['attributes']['userPrincipalName'][0]).upper()
+		if 'dNSHostName' in comp['attributes'].keys():
+			c.properties["name"] = str(comp['attributes']['dNSHostName'][0]).upper()
 		else:
 			c.properties["name"] = str(comp['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "") + "." + '.'.join(str(comp['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
 		if 'userPrincipalName' in comp['attributes'].keys():
-			c.properties["domain"] = str(comp['attributes']['userPrincipalName'][0]).upper().split(".")[1]
+			c.properties["domain"] = str(comp['attributes']['userPrincipalName'][0]).upper().split(".")[1:]
+		elif ("." in str(c.properties["name"])):
+			c.properties["domain"] = '.'.join(str(c.properties["name"]).upper().split(".")[1:])
 		else:
-			c.properties["domain"] = str(c.properties["name"]).upper().split(".")[1]
+			# need to manually build domain based off object
+			c.properties["domain"] = '.'.join(str(comp['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
 		c.properties["objectid"] = comp['attributes']['objectSid'][0]
 
-		c.properties["distinguishedname"] = comp['attributes']['distinguishedName'][0]#.replace('"', '`').replace("'", "`")
+		c.properties["distinguishedname"] = comp['attributes']['distinguishedName'][0]
 
 		c.properties["highvalue"] = False
 		for h in hvt:
@@ -410,7 +416,7 @@ def parse_computers(input_folder, output_folder, bh_version):
 			c.properties['serviceprincipalnames'] = None
 
 		if 'description' in comp['attributes'].keys():
-			c.properties['description'] = comp['attributes']['description'][0]#.replace('"', '`').replace("'", "`")
+			c.properties['description'] = comp['attributes']['description'][0]
 		else:
 			c.properties['description'] = None
 
@@ -439,7 +445,7 @@ def parse_groups(input_folder, output_folder, no_users, bh_version):
 	if (no_users):
 		j = json.loads(open(input_folder + ret_os_path() + "domain_users.json", "r").read())
 		for user in j:
-			u = user['attributes']['distinguishedName'][0]#.replace('"', '`').replace("'", "`")
+			u = user['attributes']['distinguishedName'][0]
 			if ("$" in u):
 				db[u] = [user['attributes']['objectSid'][0], "Computer"]
 			else:
@@ -458,16 +464,14 @@ def parse_groups(input_folder, output_folder, no_users, bh_version):
 		g.ObjectIdentifier = group['attributes']['objectSid'][0]
 
 		if 'userPrincipalName' in group['attributes'].keys():
-			g.properties['name'] = str(group['attributes']['userPrincipalName'][0]).upper()#.replace('"', '`').replace("'", "`")
+			g.properties['name'] = str(group['attributes']['userPrincipalName'][0]).upper()
 		else:
-			# original
-			#g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").replace('"', '`').replace("'", "`").upper() + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper().replace('"', '`').replace("'", "`")
-			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").upper() + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()#.replace('"', '`').replace("'", "`")
+			g.properties['name'] = str(group['attributes']['distinguishedName'][0]).split(",CN=")[0].split("=")[1].replace(",OU", "").upper() + "@" + '.'.join(str(group['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
 		if 'userPrincipalName' in group['attributes'].keys():
 			g.properties['domain'] = str(group['attributes']['userPrincipalName'][0]).upper().split("@")[1]
 		else:
-			g.properties['domain'] = str(g.properties["name"]).upper().split("@")[1]#.replace('"', '`').replace("'", "`")
+			g.properties['domain'] = str(g.properties["name"]).upper().split("@")[1]
 
 		g.properties['objectid'] = group['attributes']['objectSid'][0]
 
@@ -476,7 +480,7 @@ def parse_groups(input_folder, output_folder, no_users, bh_version):
 			if (h in str(group['attributes']['objectSid'][0]).split("-")[-1:]):
 				g.properties['highvalue'] = True
 
-		g.properties['distinguishedname'] = group['attributes']['distinguishedName'][0]#.replace('"', '`').replace("'", "`")
+		g.properties['distinguishedname'] = group['attributes']['distinguishedName'][0]
 
 		if 'adminCount' in group['attributes'].keys():
 			g.properties['admincount'] = True
@@ -484,7 +488,7 @@ def parse_groups(input_folder, output_folder, no_users, bh_version):
 			g.properties['admincount'] = False
 
 		if 'description' in group['attributes'].keys():
-			g.properties['description'] = group['attributes']['description'][0]#.replace('"', '`').replace("'", "`")
+			g.properties['description'] = group['attributes']['description'][0]
 		else:
 			g.properties['description'] = None
 
@@ -569,7 +573,7 @@ def parse_domains(input_folder, output_folder, bh_version):
 			d.properties['distinguisedname'] = None
 
 		if 'description' in dom['attributes'].keys():
-			d.properties['description'] = dom['attributes']['description'][0]#.replace('"', '`').replace("'", "`")
+			d.properties['description'] = dom['attributes']['description'][0]
 		else:
 			d.properties['description'] = None
 
@@ -603,7 +607,7 @@ def parse_domain_trusts(input_folder, output_folder):
 		d.properties['distinguishedname'] = dom['attributes']['distinguishedName'][0].upper()
 
 		if 'description' in dom['attributes'].keys():
-			d.properties['description'] = dom['attributes']['description'][0]#.replace('"', '`').replace("'", "`")
+			d.properties['description'] = dom['attributes']['description'][0]
 		else:
 			d.properties['description'] = None
 
