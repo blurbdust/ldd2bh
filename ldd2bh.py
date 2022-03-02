@@ -47,6 +47,21 @@ functional_level = {
 	7: "2016"
 }
 
+# https://github.com/dirkjanm/ldapdomaindump/blob/ab1b4c38468509bb43b8943839e987c6680f1b5c/ldapdomaindump/__init__.py#L76
+trust_flags = {
+	"NON_TRANSITIVE":0x00000001,
+	"UPLEVEL_ONLY":0x00000002,
+	"QUARANTINED_DOMAIN":0x00000004,
+	"FOREST_TRANSITIVE":0x00000008,
+	"CROSS_ORGANIZATION":0x00000010,
+	"WITHIN_FOREST":0x00000020,
+	"TREAT_AS_EXTERNAL":0x00000040,
+	"USES_RC4_ENCRYPTION":0x00000080,
+	"CROSS_ORGANIZATION_NO_TGT_DELEGATION":0x00000200,
+	"CROSS_ORGANIZATION_ENABLE_TGT_DELEGATION":0x00000800,
+	"PIM_TRUST":0x00000400
+}
+
 def ret_os_path():
 	if ((sys.platform == 'win32') and (os.environ.get('OS','') == 'Windows_NT')):
 		return "\\"
@@ -338,7 +353,7 @@ def parse_users(input_folder, output_folder, bh_version):
 		count += 1
 
 	with open(output_folder + ret_os_path() + "users.json", "w") as outfile:
-		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "users", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "users", "count": {}, "version": {}'.format(count, bh_version) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 		outfile.write(buf)
 	buf = ""
 
@@ -430,7 +445,7 @@ def parse_computers(input_folder, output_folder, bh_version):
 		count += 1
 
 	with open(output_folder + ret_os_path() + "computers.json", "w") as outfile:
-		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "computers", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "computers", "count": {}, "version": {}'.format(count, bh_version) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 		outfile.write(buf)
 	buf = ""
 
@@ -504,7 +519,7 @@ def parse_groups(input_folder, output_folder, no_users, bh_version):
 		count += 1
 
 	with open(output_folder + ret_os_path() + "groups.json", "w") as outfile:
-		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": 3'.format(count) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "groups", "count": {}, "version": {}'.format(count, bh_version) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 		outfile.write(buf)
 	buf = ""
 
@@ -541,6 +556,10 @@ def sid_to_str(sid):
 		pass
 
 def parse_domains(input_folder, output_folder, bh_version):
+	# https://github.com/dzhibas/SublimePrettyJson/blob/af5a6708d308f60787499e360081bf92afe66156/PrettyJson.py#L48
+	brace_newline = re.compile(r'^((\s*)".*?":)\s*([{])', re.MULTILINE)
+	bracket_newline = re.compile(r'^((\s*)".*?":)\s*([\[])', re.MULTILINE)
+
 	count = 0
 	sid = None
 	j = json.loads(open(input_folder + ret_os_path() + "domain_policy.json", "r").read())
@@ -554,10 +573,10 @@ def parse_domains(input_folder, output_folder, bh_version):
 			d.ObjectIdentifier = None
 			d.properties['objectid'] = None
 
-		if 'name' in dom['attributes'].keys():
-			d.properties['name'] = dom['attributes']['name'][0].upper()
-		else:
-			d.properties['name'] = None
+#		if 'name' in dom['attributes'].keys():
+#			d.properties['name'] = dom['attributes']['name'][0].upper()
+#		else:
+#			d.properties['name'] = None
 
 		if 'cn' in dom['attributes'].keys():
 			d.properties['domain'] = dom['attributes']['cn'][0].upper()
@@ -565,6 +584,8 @@ def parse_domains(input_folder, output_folder, bh_version):
 			d.properties['domain'] = dom['attributes']['distinguishedName'][0].upper().replace(",DC=", ".").replace("DC=", "")
 		else:
 			d.properties['domain'] = dom['attributes']['cn'][0].upper()
+
+		d.properties['name'] = d.properties['domain']
 
 		if 'distinguishedName' in dom['attributes'].keys():
 			d.properties['distinguishedname'] = dom['attributes']['distinguishedName'][0].upper()
@@ -585,12 +606,13 @@ def parse_domains(input_folder, output_folder, bh_version):
 		buf += d.export() + ', '
 		count += 1
 
-	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": 3'.format(count) + '}}'
 	with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
+		buf = bracket_newline.sub(r"\1\n\2\3", bracket_newline.sub(r"\1\n\2\3", json.dumps(json.loads(buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": {}'.format(count, bh_version) + '}}'), indent=4, sort_keys=False, separators=(",", ": "))))
 		outfile.write(buf)
+	buf = ""
 
 
-def parse_domain_trusts(input_folder, output_folder):
+def parse_domain_trusts(input_folder, output_folder, bh_version):
 	count = 0
 	sid = None
 	j = json.loads(open(input_folder + ret_os_path() + "domain_trusts.json", "r").read())
@@ -617,14 +639,27 @@ def parse_domain_trusts(input_folder, output_folder):
 		else:
 			d.properties['functionallevel'] = None
 
+
 		buf += d.export() + ', '
 		count += 1
 
-	buf = buf[:-2] + '],' + ' "meta": ' + '{' + '"type": "domains", "count": {}, "version": 3'.format(count) + '}}'
-# I'll need to figure out how to append to this file later, not just with 'a'.
-# I'll need to add another domain object per trust. Maybe the parsing should all be in one function?
-#	with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
-#		outfile.write(buf)
+		# it's here because it's a work in progress still
+		# if we find inbound or bidrectional, we need to fix up the already written domain
+		# otherwise we can write to only this domain
+		d.Trusts = { "TargetDomain": "", "TargetDomainSid": "", "IsTransitive": "", "TrustDirection": "", "TrustType": "", "SidFilteringEnabled": ""}
+
+	j = json.loads(open(output_folder + ret_os_path() + "domains.json", "r").read())
+
+	if (count > 0):
+		j2 = json.loads(buf[:-2] + "]}")
+		for dom in j2['domains']:
+			j['domains'].append(dom)
+		j['meta']['count'] += count
+		with open(output_folder + ret_os_path() + "domains.json", "w") as outfile:
+			outfile.write(json.dumps(j))
+	else:
+		# we have no domain trusts, stop doing anything
+		return
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(
@@ -640,9 +675,12 @@ if __name__ == '__main__':
 	parser.add_argument('-c','--computers', action='store_true', default=False, required=False, help='Output only computers, default: False')
 	parser.add_argument('-g','--groups', action='store_true', default=False, required=False, help='Output only groups, default: False')
 	parser.add_argument('-d','--domains', action='store_true', default=False, required=False, help='Output only domains, default: False')
-	parser.add_argument('-b','--bh-version', dest='bh_version', default="3", required=False, help='Bloodhound data format version (3 or 4), default: 3')
+	parser.add_argument('-b','--bh-version', dest='bh_version', default=3, type=int, required=False, help='Bloodhound data format version (only 3 for now), default: 3')
 
 	args = parser.parse_args()
+	
+	if ((args.bh_version != 3)):
+		raise argparse.ArgumentTypeError('Invalid Bloodhound file version given! New version support might come in the future.')
 
 	if ((args.input_folder != ".") and (args.output_folder != ".")):
 		if (sum([args.users, args.computers, args.groups, args.domains]) == 0):
@@ -662,6 +700,7 @@ if __name__ == '__main__':
 		if (args.domains):
 			print("Parsing domains...")
 			parse_domains(args.input_folder, args.output_folder, args.bh_version)
+			parse_domain_trusts(args.input_folder, args.output_folder, args.bh_version)
 		print("Done!")
 	else:
 		parser.print_help()
