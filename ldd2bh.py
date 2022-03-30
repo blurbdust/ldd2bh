@@ -256,7 +256,10 @@ def parse_users(input_folder, output_folder, bh_version):
 			u.properties['name'] = str(user['attributes']['sAMAccountName'][0]).upper() + "@" + '.'.join(str(user['attributes']['distinguishedName'][0]).split(",DC=")[1:]).upper()
 
 		if 'userPrincipalName' in user['attributes'].keys():
-			u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper().split("@")[1]
+			if "@" in str(user['attributes']['userPrincipalName'][0]):
+				u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper().split("@")[1]
+			else:
+				u.properties['domain'] = str(user['attributes']['userPrincipalName'][0]).upper()
 		else:
 			u.properties['domain'] = str(u.properties["name"]).upper().split("@")[1]
 
