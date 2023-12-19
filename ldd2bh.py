@@ -694,7 +694,7 @@ if __name__ == '__main__':
 
 	parser.add_argument('-i','--input', dest="input_folder", default=".", required=False, help='Input Directory for ldapdomaindump data, default: current directory')
 	parser.add_argument('-o','--output', dest="output_folder", default=".", required=False, help='Output Directory for Bloodhound data, default: current directory')
-	parser.add_argument('-a','--all', action='store_true', default=True, required=False, help='Output only users, default: True')
+	parser.add_argument('-a','--all', action='store_true', default=True, required=False, help='Output all files, default: True')
 	parser.add_argument('-u','--users', action='store_true', default=False, required=False, help='Output only users, default: False')
 	parser.add_argument('-c','--computers', action='store_true', default=False, required=False, help='Output only computers, default: False')
 	parser.add_argument('-g','--groups', action='store_true', default=False, required=False, help='Output only groups, default: False')
